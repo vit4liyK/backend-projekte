@@ -1,42 +1,51 @@
 const express = require("express");
-const app = express();
+const Database = require("better-sqlite3");
 
+const app = express();
 app.use(express.json());
 
-let todos = [
-  { id: 1, text: "Einkaufen", erledigt: false },
-  { id: 2, text: "Coden lernen", erledigt: false },
-];
+// Datenbank erstellen/öffnen
+const db = new Database("todos.db");
+
+// Tabelle erstellen wenn nicht existiert
+db.exec(`
+  CREATE TABLE IF NOT EXISTS todos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    text TEXT NOT NULL,
+    erledigt INTEGER DEFAULT 0
+  )
+`);
 
 // GET — alle Todos holen
 app.get("/todos", (req, res) => {
+  const todos = db.prepare("SELECT * FROM todos").all();
   res.json(todos);
 });
 
 // POST — neuen Todo erstellen
 app.post("/todos", (req, res) => {
-  const neuerTodo = {
-    id: todos.length + 1,
-    text: req.body.text,
-    erledigt: false,
-  };
-  todos.push(neuerTodo);
-  res.json(neuerTodo);
+  const stmt = db.prepare("INSERT INTO todos (text) VALUES (?)");
+  const result = stmt.run(req.body.text);
+  res.json({ id: result.lastInsertRowid, text: req.body.text, erledigt: 0 });
 });
 
 // DELETE — Todo löschen
 app.delete("/todos/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  todos = todos.filter((todo) => todo.id !== id);
+  db.prepare("DELETE FROM todos WHERE id = ?").run(req.params.id);
   res.json({ message: "Gelöscht!" });
 });
 
-// PUT Route - Todo als erledigt markieren
+// PUT — Todo togglen
 app.put("/todos/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const todo = todos.find((t) => t.id === id);
-  todo.erledigt = !todo.erledigt;
-  res.json(todo);
+  const todo = db
+    .prepare("SELECT * FROM todos WHERE id = ?")
+    .get(req.params.id);
+  const neuerWert = todo.erledigt === 0 ? 1 : 0;
+  db.prepare("UPDATE todos SET erledigt = ? WHERE id = ?").run(
+    neuerWert,
+    req.params.id,
+  );
+  res.json({ ...todo, erledigt: neuerWert });
 });
 
 app.listen(3000, () => {
