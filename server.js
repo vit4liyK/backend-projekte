@@ -31,6 +31,14 @@ app.delete("/todos/:id", (req, res) => {
   res.json({ message: "Gelöscht!" });
 });
 
+// PUT Route - Todo als erledigt markieren
+app.put("/todos/:id", (req, res) => {
+  const id = parseInt(req.params.id);
+  const todo = todos.find((t) => t.id === id);
+  todo.erledigt = !todo.erledigt;
+  res.json(todo);
+});
+
 app.listen(3000, () => {
   console.log("Server läuft auf Port 3000");
 });
