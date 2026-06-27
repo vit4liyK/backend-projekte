@@ -2,6 +2,7 @@ const express = require("express");
 const Database = require("better-sqlite3");
 const cors = require("cors");
 const auth = require("./auth");
+const authMiddleware = require("./middleware");
 
 const app = express();
 app.use(express.json());
@@ -21,7 +22,7 @@ db.exec(`
 `);
 
 // GET — alle Todos holen
-app.get("/todos", (req, res) => {
+app.get("/todos", authMiddleware, (req, res) => {
   const todos = db.prepare("SELECT * FROM todos").all();
   res.json(todos);
 });
