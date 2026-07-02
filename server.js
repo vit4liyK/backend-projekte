@@ -17,21 +17,29 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS todos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     text TEXT NOT NULL,
-    erledigt INTEGER DEFAULT 0
+    erledigt INTEGER DEFAULT 0,
+    user_email TEXT
   )
 `);
 
 // GET — alle Todos holen
 app.get("/todos", authMiddleware, (req, res) => {
-  const todos = db.prepare("SELECT * FROM todos").all();
+  const todos = db
+    .prepare("SELECT * FROM todos WHERE user_email = ?")
+    .all(req.user.email);
   res.json(todos);
 });
 
 // POST — neuen Todo erstellen
 app.post("/todos", (req, res) => {
-  const stmt = db.prepare("INSERT INTO todos (text) VALUES (?)");
-  const result = stmt.run(req.body.text);
-  res.json({ id: result.lastInsertRowid, text: req.body.text, erledigt: 0 });
+  const stmt = db.prepare("INSERT INTO todos (text, user_email) VALUES (?,?)");
+  const result = stmt.run(req.body.text, req.body.userEmail);
+  res.json({
+    id: result.lastInsertRowid,
+    text: req.body.text,
+    erledigt: 0,
+    user_email: req.body.userEmail,
+  });
 });
 
 // DELETE — Todo löschen
